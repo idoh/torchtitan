@@ -188,10 +188,11 @@ class Attention(nn.Module):
         """
         bsz, seqlen, _ = x.size()
 
-        # Query projection
         if self.q_lora_rank == 0:
             q = self.wq(x)  # (bsz, seqlen, n_heads * qk_head_dim)
         else:
+            # wq_a: W^DQ (query down projection matrix)
+            # wq_b: concate of W^UQ (query up projection) and W^QR(used for RoPE)
             q = self.wq_b(self.q_norm(self.wq_a(x)))
 
         q = q.view(bsz, seqlen, self.n_heads, self.qk_head_dim)
@@ -201,7 +202,8 @@ class Attention(nn.Module):
         q_pe = apply_rotary_emb(q_pe, freqs_cis)
         q = torch.cat([q_nope, q_pe], dim=-1)  # (bsz, seqlen, n_heads, qk_head_dim)
 
-        # Key-value projection
+        # wkv_a: concate of W^DKV (key/value down projection matrix) and W^KR (used for RoPE)
+        # wkv_b: concate of W^UK (key up projection) and W^UV (value up projection)
         kv = self.wkv_a(x)  # (bsz, seqlen, kv_lora_rank + qk_rope_head_dim)
         kv, k_pe = torch.split(kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1)
         k_pe = apply_rotary_emb(
@@ -220,6 +222,14 @@ class Attention(nn.Module):
         q = q.transpose(1, 2)  # (bsz, n_heads, seqlen, qk_head_dim)
         k = k.transpose(1, 2)  # (bsz, n_heads, seqlen, qk_head_dim)
         v = v.transpose(1, 2)  # (bsz, n_heads, seqlen, v_head_dim)
+        # # [rank0]:q shape:  torch.Size([32, 16, 1024, 192])
+        # # [rank0]:k shape:  torch.Size([32, 16, 1024, 192])
+        # # [rank0]:v shape:  torch.Size([32, 16, 1024, 128])
+        print("q shape: ", q.shape)
+        print("k shape: ", k.shape)
+        print("v shape: ", v.shape)
+        print("dtype: ", q.dtype, k.dtype, v.dtype)
+        print("type(): ", type(q), type(k), type(v))
 
         # TODO: Need to pass softmax_scale to sdpa() interface.
         # For mask, DeepseekV3 uses causal mask, so we can use the default mask in sdpa

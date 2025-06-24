@@ -62,7 +62,7 @@ deepseekv3_configs = {
         kv_lora_rank=512,
         qk_nope_head_dim=128,
         qk_rope_head_dim=64,
-        v_head_dim=128,
+        v_head_dim=192,
         mscale=0.70,
     ),
     "236B": DeepSeekV3ModelArgs(
