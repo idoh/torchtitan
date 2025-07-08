@@ -486,6 +486,12 @@ class ActivationCheckpoint:
     Selective activation checkpointing options ['int', 'op'].
     'int' (e.g., 2) for every nth layer, or 'op' for op level ac.
     """
+    selective_op_ac_mm_flops_threshold: int = 0
+    """
+    When selective_ac_option is 'op', this threshold is used to determine whether to
+    save a given mm, e.g. 1e5 means excluding mms flops < 1e5, and then saving
+    every other mm from the remaining mms.
+    """
 
 
 @dataclass
